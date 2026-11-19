@@ -72,15 +72,28 @@ Phụ trách: câu 1.1 (Phiếu A mục A1), câu 1.5 (cùng bàn, A3), câu 1.6
 
 ### Đóng góp cụ thể
 
-*(Điền trong và cuối buổi lab; ghi rõ nếu có dùng trợ lý AI cho phần việc nào.)*
+- Chủ trì thiết lập Bản tiêu chí chấp nhận trong `config/acceptance_criteria.json` với các ranh giới đỏ nghiêm ngặt: hoàn sai = 0đ, lỗi hãng oan = 0 ca, rò rỉ PII = 0 ca; các chỉ số kinh doanh & vận hành: trần chi phí mỗi ticket ≤ 8.000đ (tiết kiệm ít nhất 20% so với làm tay 10.000đ theo `ops_facts`), ROI tối thiểu 20%, không để ticket bị ùn quá 60 phút.
+- Trực tiếp ký số niêm phong tiêu chí (`lab10.criteria sign`, commit `4f7f982`) trước khi chạy bất kỳ đánh giá nào.
+- Thiết lập cổng an toàn kinh doanh trong `config/operating_gates.json` (mục `business`): trần ngân sách hoàn tự động 2.000.000đ/ngày (`ops_limits.daily_auto_refund_budget_vnd`), trần chi phí LLM 1.500đ/ticket (`ops_limits.max_llm_cost_per_ticket_vnd`), phạm vi pilot giới hạn ở 2 kho bán lẻ HN và HCM (chủ động loại trừ kho HCM-B2B có đơn sỉ ≥ 2 triệu đồng để phòng ngừa rủi ro tài chính).
+- Phân tích luồng dữ liệu nghiệp vụ và cảnh báo rủi ro Concept Drift / Policy Drift v4 (áp dụng từ 01/12/2026 trong `data/world.json`) đối với các ca trễ do thiên tai bão lũ (`FORCE_MAJEURE`) cấm ghi lỗi hãng vận chuyển.
+- Chủ trì đánh giá chỉ số tài chính, ROI và kiểm tra các dòng vượt trần để đưa ra quyết định Gate 1 v1 (mốc `prepared`) và quyết định v2 (sau sự cố S4).
+- Viết Specification nghiệp vụ câu 3.2 và đề xuất điều chỉnh cổng ngân sách ngày sale bùng nổ (S4) ở mức 300.000đ để bảo vệ dòng tiền.
+- *(Có sử dụng trợ lý AI hỗ trợ rà soát tính nhất quán số liệu từ `data/world.json` và cấu trúc các phiếu A, B, C).*
 
 ### Bằng chứng
 
-*(Mã commit, mã lần chạy `runs/<mã>`, dòng trong phiếu.)*
+- File cam kết tiêu chí đã ký: `config/acceptance_criteria.json` và `config/acceptance_criteria.lock` (commit ký `4f7f982`).
+- Cấu hình cổng kinh doanh: `config/operating_gates.json` (khối `business`, checkpoint hash `7e724506`).
+- Các mục tự viết trong phiếu: Phiếu A (A1 câu 1.1, A3 câu 1.5, A4 câu 1.6, A5 ký tiêu chí); Phiếu B (B3 câu 2.3, B6 lăng kính kinh doanh câu 2.5, B7.4 câu 2.9, B8 quyết định v1); Phiếu C (C5 câu 3.2, C7 câu 3.5, C12 quyết định v2).
+- Mã lần chạy thực tế:
+  - Mốc base: `R-base-before-20261119-155033-64a6fd` (chi phí 4.203đ, hoàn sai 20.000đ, lỗi hãng oan 1).
+  - Mốc prepared: `R-base-prepared-20261119-164658-46871d` (pass rate 1.0, hoàn sai 0đ, lỗi oan 0, chi phí 5.550đ, ROI 0.8).
+  - Mốc sự cố S4: chi phí/ticket 6.966đ, ROI 0.44 (44%), độ phủ 0.561, escalation_rate 0.4957, ngân sách ngày sale 300.000đ.
 
 ### Exit ticket
 
-*(Một điều học được, một điều còn chưa chắc.)*
+- **Một điều học được:** Một hệ thống AI khi chuyển từ PoC sang Pilot không chỉ cần đo độ chính xác mô hình (pass rate) mà quan trọng hơn là phải có các cổng an toàn chặn ranh giới đỏ (ngân sách tài chính, rủi ro đối tác, rò rỉ dữ liệu) để bảo vệ dòng tiền và uy tín doanh nghiệp.
+- **Một điều còn chưa chắc:** Cách tối ưu hóa cân bằng giữa tỷ lệ chuyển người duyệt (escalation rate) và thời gian phản hồi của kiểm soát viên CSKH trong các đợt flash-sale cao điểm khi lượng đơn tăng vọt gấp 3-5 lần bình thường.
 
 ## NguyenNgocBach-2A202604108
 
