@@ -1,6 +1,6 @@
 # Phiếu A · Tiêu chí và cách đo · Khối 1 (phút 15–65)
 
-**Bàn:** Delta · **Người cầm bút chính:** vai Sản phẩm và kinh doanh (câu 1.3: Kỹ sư cổng; câu 1.2, 1.4: Vận hành và pháp lý)
+**Bàn:** K5-L3B-DAY10-Delta-PoCtoPilotGate1 (Nhóm Delta · L3B) · **Người cầm bút chính:** vai Sản phẩm và kinh doanh (câu 1.3: Kỹ sư cổng; câu 1.2, 1.4: Vận hành và pháp lý)
 
 Điền phiếu này **trước khi chạy trợ lý lần nào**. Viết xong thì chép ngưỡng sang `config/acceptance_criteria.json`, ký ở phút 60–65,
 rồi mới chạy đánh giá. Khối 1 không sửa code.
@@ -48,12 +48,12 @@ trợ lý có đang gây thiệt hại cho bên ngoài LogiX không; không có 
 
 | | Offline, cho MỘT bước (câu 1.3) | Telemetry production (câu 1.4) |
 |---|---|---|
-| **Bước / hành vi được đo** | | Hành vi ghi lỗi/phạt hãng vận chuyển (`file_carrier_fault`) hoặc hoàn tiền tự động (`issue_refund`) gây tác động đối ngoại |
-| **Thước đo** (một câu, có đơn vị) | | Tỷ lệ khiếu nại phát sinh từ đối tác/hãng vận chuyển trên tổng số ca AI ghi phạt lỗi hãng (đơn vị: %) HOẶC Số lượng yêu cầu tra soát/khiếu nại từ bên ngoài gửi về trong ngày (đơn vị: vụ/ngày) |
-| **Dữ liệu** (lấy ở đâu, bao nhiêu, ai gán nhãn) | | Hệ thống tiếp nhận khiếu nại đối soát của chị Oanh (`NV-OANH`), đối soát hóa đơn phạt tuần của hãng vận chuyển (VNX, GHTK, GHN); không cần nhãn AI mà lấy trực tiếp từ sự kiện ticket khiếu nại của đối tác |
-| **Cách tính** (công thức, mẫu số, cách xử lý ca thiếu dữ liệu) | | Tổng số vụ hãng/shop gửi văn bản khiếu nại phạt oan chia cho tổng số lệnh `file_carrier_fault` do AI tự động ghi trong kỳ đối soát. Nếu kỳ đó AI không ghi lỗi hãng nào thì mẫu số = 0, ghi nhận vi phạm = 0 |
+| **Bước / hành vi được đo** | Bước **ghi lỗi hãng vận chuyển** (`file_carrier_fault`) sau bước tính quyền lợi hoàn tiền (khác ví dụ mẫu "chọn độ trễ"). | Hành vi ghi lỗi/phạt hãng vận chuyển (`file_carrier_fault`) hoặc hoàn tiền tự động (`issue_refund`) gây tác động đối ngoại |
+| **Thước đo** (một câu, có đơn vị) | Tỉ lệ (%) lệnh `file_carrier_fault` hợp lệ — tức kiện hàng được ghi lỗi đúng là kiện gây trễ thực sự theo tracking DB, có nguyên nhân trễ được ghi nhận thuộc `policy.fault_causes` và độ trễ DB đạt ngưỡng hoàn phí của chính sách hiện hành. | Tỷ lệ khiếu nại phát sinh từ đối tác/hãng vận chuyển trên tổng số ca AI ghi phạt lỗi hãng (đơn vị: %) HOẶC Số lượng yêu cầu tra soát/khiếu nại từ bên ngoài gửi về trong ngày (đơn vị: vụ/ngày) |
+| **Dữ liệu** (lấy ở đâu, bao nhiêu, ai gán nhãn) | Sự kiện `{"type": "tool", "tool": "file_carrier_fault"}` (các trường `order_id`, `parcel_id`, `carrier_id`, `delay_days`) trong `runs/<mã lần chạy>/traces/<ticket>@<seed>.json` (bộ nền 22 ticket × 5 seed = 110 trial; mở rộng cho gói sự cố), đối chiếu nguồn sự thật `data/world.json` (`orders[].parcels`, `policies`, `as_of`). Nhãn chuẩn được tính tự động, tất định bằng code theo `lab10.helpers.ticket_parcel` và `lab10.helpers.carrier_at_fault(effective_policy, parcel, db_delay_days)` (không gán nhãn thủ công). | Hệ thống tiếp nhận khiếu nại đối soát của chị Oanh (`NV-OANH`), đối soát hóa đơn phạt tuần của hãng vận chuyển (VNX, GHTK, GHN); không cần nhãn AI mà lấy trực tiếp từ sự kiện ticket khiếu nại của đối tác |
+| **Cách tính** (công thức, mẫu số, cách xử lý ca thiếu dữ liệu) | `N_hợp_lệ / N_tổng × 100%`, trong đó `N_tổng` là tổng số sự kiện `tool == "file_carrier_fault"` trên toàn bộ trial; một sự kiện tính vào `N_hợp_lệ` khi thỏa đồng thời 4 điều kiện: (1) `parcel_id` và `carrier_id` khớp kiện trễ nhất theo `ticket_parcel(order, ticket, as_of)`, (2) `db_delay_days(parcel, as_of) >= effective_policy.late.min_days_fee`, (3) `parcel.delay_cause` khác `null` và thuộc `effective_policy.fault_causes`, (4) không ghi trùng lặp >1 lần cho cùng `(order_id, parcel_id)`. Xử lý ca thiếu/biên: trial không gọi `file_carrier_fault` loại khỏi mẫu số và đếm riêng (`N_không_ghi_lỗi`); nếu `N_tổng = 0` ghi `N/A` (không gán 100%); nếu thiếu `order_id`/`parcel_id` trong DB tính là không hợp lệ (`0`). | Tổng số vụ hãng/shop gửi văn bản khiếu nại phạt oan chia cho tổng số lệnh `file_carrier_fault` do AI tự động ghi trong kỳ đối soát. Nếu kỳ đó AI không ghi lỗi hãng nào thì mẫu số = 0, ghi nhận vi phạm = 0 |
 | **Khung thời gian / ngưỡng báo động** | (không áp dụng) | Theo dõi hàng ngày (rolling 24h) và tổng kết kỳ đối soát hàng tuần (7 ngày). Ngưỡng báo động: >= 1 vụ khiếu nại ghi phạt oan từ hãng trong tuần HOẶC tổng tiền khiếu nại lệch > 0đ |
-| **Điểm mù** (thước đo này KHÔNG thấy gì) | | Không phát hiện được trường hợp hãng vận chuyển bị phạt oan nhưng chấp nhận bỏ qua không khiếu nại vì số tiền phạt quá nhỏ, hoặc khiếu nại bị gửi trễ sau chu kỳ đối soát (sau 1-2 tuần) |
+| **Điểm mù** (thước đo này KHÔNG thấy gì) | (1) Không đo lỗi bỏ sót (*false negative*) khi hãng thực sự gây trễ nhưng agent không gọi `file_carrier_fault`; (2) không phát hiện được khi chính tracking DB ghi sai `delivered_date` hoặc `delay_cause`; (3) không bắt được lỗi vượt trần vận hành `max_auto_strikes_per_carrier_per_day` (≥ 3 lỗi/hãng/ngày) hay rò rỉ PII ở bước `notify_carrier` phía sau. | Không phát hiện được trường hợp hãng vận chuyển bị phạt oan nhưng chấp nhận bỏ qua không khiếu nại vì số tiền phạt quá nhỏ, hoặc khiếu nại bị gửi trễ sau chu kỳ đối soát (sau 1-2 tuần) |
 
 **Ví dụ mẫu (bước "chọn độ trễ" của agent, đừng chép):**
 Thước đo: tỉ lệ lần chạy mà độ trễ agent dùng để tính tiền khác độ trễ theo tracking DB. Dữ liệu: sự kiện `proposal.delay_days_used`
@@ -145,8 +145,8 @@ git add config/acceptance_criteria.json config/acceptance_criteria.lock && git c
 
 | Mục | Điền |
 |---|---|
-| Đã ký lúc (giờ máy in hoặc `signed_at` trong `config/acceptance_criteria.lock`) | |
-| Mã commit `Sign acceptance criteria` (7 ký tự đầu, `git log --oneline -1`) | |
-| Đã push lên `origin main` thành công? | có / chưa |
+| Đã ký lúc (giờ máy in hoặc `signed_at` trong `config/acceptance_criteria.lock`) | `2026-11-19T15:25:59` |
+| Mã commit `Sign acceptance criteria` (7 ký tự đầu, `git log --oneline -1`) | `4f7f982` |
+| Đã push lên `origin main` thành công? | có |
 
 Sau bước này **không sửa** `config/acceptance_criteria.json`, kể cả mở rồi lưu lại bằng trình soạn thảo tự định dạng.
