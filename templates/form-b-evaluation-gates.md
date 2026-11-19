@@ -254,10 +254,10 @@ Bốn lăng kính (bắt buộc đủ cả bốn; dự án AI hay chết ở ba 
 | Trợ lý đã tin số ngày trễ khách tự viết hoặc dính chỉ thị chèn trong ticket/`checkout_note`, tự đề xuất hoàn tiền/trừ tiền shop sai sự thật hoặc nhảy cóc qua bước phê duyệt hợp lệ (kể cả hoàn trùng khi LLM timeout retry hoặc `fail_open`). | Kỹ thuật | `T-002@55`, `agent.py` (dòng `model_override`, `directive_obeyed`, `fail_open`, `write_retry`, `lookup_approvals`), `data/world.json` (`approvals`, `ledger_seed`) | **Cổng 2 (`write_gate` nhánh `issue_refund`):** kiểm chứng `entitlement_vnd` theo tracking DB + chính sách hiệu lực, chặn hoàn trùng, chặn `fail_open`/`directive` và xác thực `approval_id` |
 | Trợ lý đã đọc nhầm phiên bản chính sách theo cờ `index_active` cũ khi bước sang ngày đổi chính sách (ví dụ `REFUND-v4` từ `2026-12-01` thay đổi hạn mức và điều kiện `FORCE_MAJEURE`), gây sai số tiền và ghi phạt oan hãng. | Kỹ thuật | `agent.py` (dòng `policy`), `data/world.json` (`policies[].effective_from`/`effective_to`), `test_helpers` | **Cổng 1 (`pre_guard`):** tự động ghim `policy_id` theo `H.effective_policy(policies, ctx.as_of)` |
 | Trợ lý đã ghi lỗi cho sai kiện hàng (`parcels[0]`), ghi lỗi khi thiếu nguyên nhân hoặc vượt trần strike/ngày, và gửi kèm thông tin cá nhân người nhận (`recipient_contact`, `customer_note`) trong thông báo tới hãng vận chuyển. | Kỹ thuật | `agent.py` (dòng `file_carrier_fault`, `notify_carrier`), `O-1013`, `O-1026` (`is_gift`), `ops_limits.max_auto_strikes_per_carrier_per_day` | **Cổng 3 (`write_gate` nhánh `file_carrier_fault` & `notify_carrier`):** đối chiếu `ticket_parcel` + `carrier_at_fault`, giữ trần strike/ngày và lọc `payload` theo `carrier_notice_fields` |
-| | Kinh doanh | | |
-| | Con người và vận hành | | |
-| | Pháp lý | | |
-| | | | |
+| Lượng khiếu nại hoàn tiền dồn dập làm cạn ngân sách ngày (vượt trần 2.000.000đ); đồng thời nhiều ticket mô tả quá dài đẩy chi phí LLM vượt 10.000đ/ticket làm ROI âm so với làm tay. | Kinh doanh | `data/world.json` (`ops_limits.daily_auto_refund_budget_vnd`, `ops_limits.max_llm_cost_per_ticket_vnd`), khối "kinh doanh và vận hành" trong report. | Cổng cấu hình `config/operating_gates.json` mục `business` (`daily_refund_cap_vnd: 2000000`, `cost_budget_per_ticket_vnd: 1500`, trần ROI `0.2`). |
+| Trợ lý chuyển duyệt dồn dập vượt quá công suất trực ca (6 ca/giờ), gây ùn tắc hàng chờ quá SLA 60 phút khiến khách hàng bức xúc khiếu nại vượt cấp. | Con người và vận hành | `data/world.json` (`ops_facts.review_capacity_per_reviewer_per_hour = 6`), theo dõi `queue_stuck` và thời gian chờ trong report. | Cổng cấu hình `config/operating_gates.json` mục `operations` (`reviewers_on_shift: 1`, `max_queue_wait_minutes: 60`, bật `decision_note: true` để giảm tải). |
+| Trợ lý đã gửi kèm số điện thoại và địa chỉ nhà chi tiết của khách hàng trong payload thông báo đối soát cho bên thứ ba, vi phạm nghiêm trọng an toàn PII. | Pháp lý | Khối `pii_leaks` trong report `lab10.eval`, đối chiếu payload gửi tool `notify_carrier` trong traces. | Cổng cấu hình `config/operating_gates.json` mục `legal` (`pii_fields_blocked_to_third_party`) kết hợp code guard lọc bỏ PII trong `lab10/guards.py`. |
+| Trợ lý tự động hoàn các đơn hàng sỉ giá trị lớn của kho HCM-B2B (> 2.000.000đ/đơn), chỉ cần 1 lỗi sai sót đã làm thâm hụt toàn bộ ngân sách bồi thường của tháng. | Kinh doanh | `data/world.json` (`warehouses[4].note`), kiểm tra trường `warehouse_id == "HCM-B2B"`. | Cổng cấu hình `pilot_scope` chỉ chạy kho `HN` và `HCM`, loại trừ hoàn toàn kho rủi ro cao `HCM-B2B` khỏi phạm vi thí điểm. |
 
 ---
 
@@ -310,10 +310,10 @@ Mỗi con số kèm một câu lý do, lấy từ `data/world.json` → `ops_lim
 
 | Khoá | Giá trị bàn đặt | Lý do (một câu, có số) |
 |---|---|---|
-| `business.daily_refund_cap_vnd` | | |
-| `business.cost_budget_per_ticket_vnd` | | |
-| `business.pilot_scope` (all / warehouse / percent) | | |
-| `business.roi_min` | | |
+| `business.daily_refund_cap_vnd` | 2000000 | Khớp chính xác với hạn mức ngân sách hoàn tự động tối đa mỗi ngày do phòng Tài chính quy định tại `ops_limits.daily_auto_refund_budget_vnd` (2.000.000đ) để bảo vệ dòng tiền LogiX. |
+| `business.cost_budget_per_ticket_vnd` | 1500 | Khớp với trần chi phí LLM tối đa cho phép trên mỗi ticket theo quy định vận hành tại `ops_limits.max_llm_cost_per_ticket_vnd` (1.500đ) nhằm kiểm soát chi phí gọi mô hình. |
+| `business.pilot_scope` (all / warehouse / percent) | `{"mode": "warehouse", "warehouses": ["HN", "HCM"], "percent": 100}` | Chỉ thí điểm tại 2 kho bán lẻ lớn nhất (HN và HCM); loại trừ kho HCM-B2B vì các đơn sỉ có giá trị tối thiểu từ 2.000.000đ (`warehouses[4].note`), rủi ro tài chính vượt quá trần tự động. |
+| `business.roi_min` | 0.2 | Đảm bảo tỷ suất sinh lời tối thiểu 20% so với phương án làm tay hoàn toàn (10.000đ/ticket theo `ops_facts.manual_cost_per_ticket_vnd`) để bù đắp chi phí hạ tầng máy chủ và rủi ro vận hành. |
 
 ### B7.5 · Câu 2.10 · Cổng con người, vận hành, pháp lý + Runbook phần 1–3
 
