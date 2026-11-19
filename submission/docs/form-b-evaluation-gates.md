@@ -334,7 +334,7 @@ Phần 1–3 và mục Giờ cao điểm viết ở vòng 1. Phần 4–5 viết
 | Người giữ công tắc tắt từng thao tác ghi | Lê Thanh Tùng / NV-TUNG | Bật/tắt công tắc khẩn cấp trong `config/switches.json` | `#alerts-logix-ops` / SĐT nội bộ: 101 |
 | Người nhận khiếu nại của bên thứ ba (hãng, shop, người nhận quà) | Phạm Kiều Oanh / NV-OANH | Tiếp nhận đối soát khiếu nại phạt từ hãng vận chuyển và shop | `#alerts-logix-ops` / SĐT nội bộ: 103 |
 
-Số người trực duyệt mỗi ca: 1 · Mỗi giờ duyệt được: 6 ca · Phạm vi pilot: all (toàn bộ 100%)
+Số người trực duyệt mỗi ca: 1 · Mỗi giờ duyệt được: 6 ca · Phạm vi pilot: 2 kho HN, HCM (100% đơn của 2 kho)
 
 #### Runbook 2 · Nhìn con số nào, ngưỡng nào thì làm gì
 
