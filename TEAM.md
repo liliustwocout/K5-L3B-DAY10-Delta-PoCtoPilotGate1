@@ -6,7 +6,7 @@
 - Lớp: `L3B`
 - Repo của bàn: `K5-L3B-DAY10-Delta-PoCtoPilotGate1`
 - Bản Lab 9 chung của bàn: `docs/lab9/eval_card.md` và `docs/lab9/PRD_v1.1.md` (nguồn: bài Lab 9 của Lê Phạm Thành Đạt - `2A202604027`)
-- Thẻ sự cố đã bốc (S1–S8):
+- Thẻ sự cố đã bốc (S1–S8): `S4`
 
 ## Thành viên
 
