@@ -29,6 +29,8 @@ lab10.helpers: db_delay_days, ticket_parcel, effective_policy, entitlement_vnd, 
 
 Mặc định dưới đây cho qua tất cả (= mốc base).
 """
+from __future__ import annotations
+
 from . import helpers as H
 from .tools import Verdict
 
