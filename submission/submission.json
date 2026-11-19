@@ -7,11 +7,11 @@
     "NguyenNgocBach-2A202604108"
   ],
   "incident": "S4",
-  "decision_v1": "",
-  "decision_v2": "",
+  "decision_v1": "Tiếp tục",
+  "decision_v2": "Tiếp tục",
   "three_lines": {
-    "environment_assumption": "",
-    "reduce_or_prevent": "",
-    "measure_in_pilot": ""
+    "environment_assumption": "Dữ liệu quét mã trạng thái từ shipper của các đối tác vận chuyển luôn được cập nhật tức thời theo thời gian thực (thực tế ngày sale cao điểm shipper thường gom đơn giao một lượt và quét bù hàng loạt vào cuối ngày gây lệch giả tạo về số ngày trễ).",
+    "reduce_or_prevent": "Cổng cấu hình trần ngân sách ngày giúp NGĂN HẲN rủi ro thâm hụt tài chính quá ngân sách ngày sale (300k), trong khi cổng phạm vi pilot chỉ GIẢM nguy cơ gặp đơn lỗi chứ không loại trừ hoàn toàn tình trạng ùn tắc hàng chờ khi lượng khiếu nại bùng nổ.",
+    "measure_in_pilot": "Cần đo lại thời gian thao tác xử lý thực tế của kiểm soát viên CSKH khi có ghi chú giải thích trong giờ cao điểm flash-sale, và đo tỷ lệ khách hàng khiếu nại lặp lại khi ticket bị chuyển vào hàng chờ thủ công."
   }
 }
