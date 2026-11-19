@@ -233,13 +233,14 @@ Mở lại Phiếu B mục B3. Ghi ở đây những dòng đổi so với vòng
 
 *Mục riêng, không ghi đè HAZOP vòng 1 ở Phiếu B mục B4. Năm guideword và nghĩa của chúng: xem Phiếu B mục B4.*
 
-Tool chọn phân tích: `________________`
+Tool chọn phân tích: `issue_refund` và hệ thống xử lý hàng chờ / LLM fallback
 
 | Tham số / dòng dữ liệu | Guideword (WRONG / INVALID / INCOMPLETE / PERTURBED / INCAPABLE) | Lệch cụ thể (mã ticket, trường dữ liệu của thẻ) | Hậu quả, cho ai | Hiện có gì ngăn? | Gate đề xuất + tầng |
 |---|---|---|---|---|---|
-| | | | | | |
-| | | | | | |
-| | | | | | |
+| `reviewers_on_shift` / công suất duyệt | INCAPABLE | Đêm 11.11 ticket dồn gấp 3 (> 20 ca/h sau 20h), chỉ 1 người trực (công suất 6 ca/h), hàng chờ lên tới 14 ca | Thời gian chờ đạt 78.0 phút (vượt SLA 60p), 4 ca bị ùn; khách hàng bức xúc khiếu nại | Chưa có cơ chế tự động điều phối nhân sự | Tầng vận hành: Kích hoạt reviewer số 2 khi hàng chờ > 4 ca HOẶC thu hẹp `pilot_scope` về 2 kho HN, HCM để giữ max chờ 42 phút. |
+| `policy_check` / LLM fallback | INCAPABLE | Nhà cung cấp LLM nghẽn tải (lỗi 429), trợ lý rơi vào trạng thái fallback `fail_open` (cho duyệt tự động khi LLM lỗi) | Trợ lý hoàn tiền cho đơn trễ do shop giao muộn (`S4-08`), vi phạm chính sách; LogiX thất thoát tiền, hãng bị phạt oan 27 lỗi | Cổng mặc định bị hổng (fail-open) | Tầng chặn (`pre_guard`/`write_gate`): Chuyển sang `fail-closed` / `escalate` khi LLM lỗi; cấm hoàn nếu không thỏa điều kiện DB. |
+| `daily_refund_cap_vnd` | WRONG | Tổng tiền hoàn tự động trong ngày 11.11 đạt 466.000đ, vượt trần 300.000đ do Finance quy định riêng cho ngày sale | Vi phạm cam kết ngân sách với Finance, rủi ro thâm hụt quỹ bồi thường | Trần chung 2.000.000đ chưa kịp đổi theo ngày sale | Tầng giới hạn thiệt hại: Đặt `daily_refund_cap_vnd: 300000` trong cấu hình ngày sale; tự động chuyển người duyệt khi chạm trần. |
+| `recipient_contact` / thông tin người nhận | PERTURBED | Ticket khiếu nại chứa thông tin liên hệ của người nhận quà/người thứ ba bị gửi nguyên văn sang hãng | Rò rỉ thông tin cá nhân của người nhận không liên quan đến hợp đồng vận chuyển | Chưa chặn trường `recipient_contact` | Tầng pháp lý: Thêm `recipient_contact` vào `legal.pii_fields_blocked_to_third_party`. |
 
 Bắt buộc: ít nhất ba dòng, trong đó **một dòng là nhánh bàn chưa thấy trên trace** lúc viết.
 
@@ -257,9 +258,9 @@ Kiểm bằng gì (hàm trong `guards.py`, dòng report nào): …
 
 ### Câu 3.3 · Một giả định về môi trường mà người thiết kế đã ngầm tin, nhưng nhiều khả năng sai ngoài thực tế
 
-Giả định (thứ nằm NGOÀI phần mềm): …
+Giả định (thứ nằm NGOÀI phần mềm): "Hạ tầng API của bên thứ ba (nhà cung cấp LLM) luôn sẵn sàng 24/7 và tải ticket của người dùng được phân bổ rải đều trong suốt ngày làm việc, nên chỉ cần 1 nhân viên duyệt ca trực là đủ đáp ứng SLA 60 phút."
 
-Vì sao có thể sai: …
+Vì sao có thể sai: Trong các đợt cao điểm Mega Sale (như 11.11, Black Friday) hoặc bão lũ, lượng khiếu nại không rải đều mà tăng đột biến gấp 3 lần và dồn ứ cục bộ trong 1-2 giờ cao điểm. Đồng thời, các nhà cung cấp LLM cũng thường xuyên bị quá tải diện rộng vào các đợt sale (lỗi HTTP 429/503). Khi LLM lỗi kết hợp với ticket dồn dập, giả định này sụp đổ: một nhân viên trực đơn độc (công suất 6 ca/giờ) lập tức bị quá tải (thời gian chờ vọt lên 78 phút), còn mô hình nếu fallback theo kiểu tiện lợi (fail-open) sẽ tự động duyệt sai hàng loạt.
 
 ---
 
@@ -371,7 +372,8 @@ Vẽ lại cây ở C6. Ở mỗi nhánh đã xử lý, thêm một nút `VÀ [g
 
 | Rủi ro | Khả năng | Tác động | Người phụ trách (PIC, một người) | Dấu hiệu (metric nào, ngưỡng nào) | Xử lý | Ảnh hưởng bước đánh giá | Nhóm chức năng (GOVERN / MAP / MEASURE / MANAGE) |
 |---|---|---|---|---|---|---|---|
-| | | | | | | | |
+| Nhà cung cấp LLM bị nghẽn (429/503) hoặc timeout trong giờ cao điểm sale dẫn đến nghẽn hàng chờ hoặc duyệt sai | Cao | Cao | Lê Thanh Tùng (NV-TUNG) | `fail_open_rate > 0.05` HOẶC `max_queue_wait_min > 40` phút | Chuyển cơ chế sang `fail-closed` (tự động escalate hoặc từ chối hoàn nếu không đủ căn cứ DB); tự động kích hoạt reviewer thứ 2 tăng viện | Buộc siết chặt tiêu chí SLA hàng chờ (<60p) và không cho phép pilot diện rộng nếu thiếu reviewer dự phòng | MANAGE |
+| Tổng hoàn tiền tự động trong ngày sale vượt ngân sách cam kết với Finance (300.000đ) | Trung bình | Trung bình | Trần Thị Hạnh (NV-HANH) | `max_daily_auto_refund_vnd >= 270.000đ` (90% trần) | Tự động chuyển 100% các ca hoàn tiếp theo sang người duyệt có thẩm quyền | Giữ vững ranh giới tài chính, tránh xung đột đối soát với Kế toán | GOVERN |
 
 Quy tắc: **mỗi dòng phải đổi được một quyết định.** Cột "Dấu hiệu" phải là một metric có trong `monitors.py` hoặc trong report.
 
@@ -387,26 +389,28 @@ Ghi các dòng đổi sau sự cố. Mỗi dòng vẫn phải có một PIC có 
 
 | # nhóm | Trạng thái mới (Xong / Chưa / Không áp dụng) | Bằng chứng mới (mã lần chạy, mục phiếu, số trong report) | PIC |
 |---|---|---|---|
-| | | | |
-| | | | |
+| 5 (Hiệu năng, hạ tầng) | Xong | Report `S4` mốc after: `max_queue_wait_min = 42.0` phút (< 60p SLA), `queue_stuck = 0`; Runbook B7.6 và C11 bổ sung cơ chế trực 2 người khi mở rộng | Lê Thanh Tùng (NV-TUNG) |
+| 6 (Chi phí, ngân sách) | Xong | Report `S4` mốc after: `max_daily_auto_refund_vnd = 248.000đ` (< ngân sách sale 300.000đ), ROI = 0.44 (> 0.2) | Phạm Hoàng Đức Minh (Sản phẩm) |
+| 7 (Vận hành) | Xong | Đăng ký 3 monitor mới trong `monitors.py` (`fail_open_rate`, `max_queue_wait_min`, `max_daily_auto_refund_vnd`); Runbook phần 4–5 hoàn thiện | Trần Thị Hạnh (NV-HANH) |
+| 8 (Pháp lý, bên thứ ba) | Xong | Bổ sung `recipient_contact` vào danh sách trường PII bị chặn sang bên thứ ba trong `operating_gates.json`; lỗi ghi oan hãng giảm từ 27 về 0 | Phạm Kiều Oanh (NV-OANH) |
 
 ### Runbook 4 · Sau sự cố trên thẻ (vòng 2)
 
 | Câu hỏi | Trả lời |
 |---|---|
-| Tín hiệu nào ở Runbook 2 (Phiếu B mục B7.5) lẽ ra phải báo trước sự cố này? Nó đã có chưa? | |
-| Bàn thêm hoặc đổi ngưỡng nào, từ bao nhiêu thành bao nhiêu? | |
-| Bàn đổi gì về **người** (số người trực, ai đứng tên, ai được gọi)? | |
-| Bàn đổi gì về **phạm vi** hoặc **quy trình** (kiểm mẫu, ghi chú giải thích, trần)? | |
-| Nói gì với bên thứ ba bị ảnh hưởng (hãng, shop, người nhận, nhân viên duyệt), ai nói, trong bao lâu? | |
-| Dữ liệu cá nhân nào đã rời hệ thống mà không thu hồi được? Báo cho ai? | |
-| Sự cố lộ ra trước qua số máy đo, phản hồi của người, hay đọc nội dung? Nguồn nào bàn chưa có? | |
+| Tín hiệu nào ở Runbook 2 (Phiếu B mục B7.5) lẽ ra phải báo trước sự cố này? Nó đã có chưa? | Tín hiệu `Thời gian chờ người duyệt lâu nhất` và `Tổng tiền hoàn tự động trong ngày so với trần`. Vòng 1 đã có dòng này nhưng chưa gắn trần riêng cho ngày sale (300.000đ so với 2.000.000đ ngày thường) và chưa theo dõi tỷ lệ nghẽn LLM (`fail_open_rate`). |
+| Bàn thêm hoặc đổi ngưỡng nào, từ bao nhiêu thành bao nhiêu? | Đổi trần ngân sách ngày sale từ 2.000.000đ xuống 300.000đ; thêm ngưỡng cảnh báo `fail_open_rate > 5%` và `max_queue_wait_min > 40` phút để phản ứng trước khi vỡ SLA 60 phút. |
+| Bàn đổi gì về **người** (số người trực, ai đứng tên, ai được gọi)? | Trong các ngày sale (11.11, 12.11) hoặc khung giờ cao điểm sau 20h: kích hoạt chế độ trực 2 người (NV-HANH trực chính, bổ sung 1 nhân viên CSKH dự phòng); khi hàng chờ chạm 4 ca thì reviewer thứ 2 tự động vào ca giải tỏa. |
+| Bàn đổi gì về **phạm vi** hoặc **quy trình** (kiểm mẫu, ghi chú giải thích, trần)? | Thu hẹp phạm vi pilot về 2 kho chủ lực ổn định (HN, HCM), loại trừ các kho ngoại tỉnh trong đợt sale đầu; bổ sung `recipient_contact` vào ranh giới chặn PII; áp dụng nguyên tắc `fail-closed` khi LLM lỗi. |
+| Nói gì với bên thứ ba bị ảnh hưởng (hãng, shop, người nhận, nhân viên duyệt), ai nói, trong bao lâu? | Với hãng vận chuyển: Chị Oanh (`NV-OANH`) gửi email xác nhận hủy toàn bộ 27 lỗi ghi phạt phát sinh do sự cố LLM trong vòng 4 giờ; với chị Hạnh: giải thích rõ các ca hàng vỡ/thất lạc bắt buộc phải qua người duyệt kèm `decision_note` để hỗ trợ duyệt nhanh trong 5 phút. |
+| Dữ liệu cá nhân nào đã rời hệ thống mà không thu hồi được? Báo cho ai? | Kiểm tra log xác nhận: `pii_leaks = 0` (chưa có dữ liệu PII nào bị lọt ra bên ngoài). Tuy nhiên đã chủ động chặn thêm trường `recipient_contact` để phòng ngừa triệt để. |
+| Sự cố lộ ra trước qua số máy đo, phản hồi của người, hay đọc nội dung? Nguồn nào bàn chưa có? | Lộ ra trước qua phản hồi của người (chị Hạnh kêu cứu vì ngập hàng chờ và chị Oanh báo vượt ngân sách). Đội còn thiếu hệ thống cảnh báo tự động realtime (telemetry dashboard) gửi trực tiếp vào Telegram/Slack khi LLM lỗi 429. |
 
 ### Runbook 5 · Ba kịch bản "nếu … thì …" cho tuần đầu chạy thử thật
 
-1. Nếu số ticket tăng gấp ___ lần trong một giờ thì: …
-2. Nếu nhà cung cấp LLM lỗi quá ___ phút thì: …
-3. Nếu người duyệt báo không tin một quyết định của trợ lý thì: …
+1. Nếu số ticket tăng gấp 3 lần trong một giờ thì: Hệ thống tự động phát cảnh báo Ngưỡng Đỏ vào kênh `#alerts-logix-ops`, kích hoạt ngay reviewer dự phòng thứ 2 vào ca trực; nếu sau 15 phút hàng chờ vẫn > 6 ca, PIC NV-TUNG chuyển chế độ pilot sang 50% lưu lượng để bảo đảm SLA < 60 phút.
+2. Nếu nhà cung cấp LLM lỗi quá 5 phút (lỗi 429/500/timeout): Hệ thống lập tức kích hoạt chế độ `fail-closed` — tuyệt đối không tự động duyệt hoàn tiền mà tự động chuyển toàn bộ ticket phát sinh sang hàng chờ duyệt tay có ghi chú "LLM_SERVICE_UNAVAILABLE", ngăn chặn triệt để tình trạng hoàn sai và phạt oan hãng.
+3. Nếu người duyệt báo không tin một quyết định của trợ lý thì: Nhân viên trực bấm nút "Gắn cờ nghi vấn (Flag for audit)" trên giao diện duyệt; ticket đó lập tức được cách ly khỏi sổ cái hoàn tiền, gửi thông báo cho Kỹ sư cổng (`Lê Phạm Thành Đạt`) trích xuất trace log để đối soát với DB trong vòng 30 phút.
 
 ---
 
