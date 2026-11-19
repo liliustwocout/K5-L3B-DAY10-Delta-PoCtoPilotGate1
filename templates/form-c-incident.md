@@ -252,9 +252,9 @@ Bắt buộc: ít nhất ba dòng, trong đó **một dòng là nhánh bàn chư
 
 ### Câu 3.2 · Một specification mà nếu bị vi phạm thì gây ra tác hại trên thẻ
 
-Kiểm được bằng code hoặc bằng một con số trong report: …
+Kiểm được bằng code hoặc bằng một con số trong report: Trong các ngày diễn ra chiến dịch khuyến mại (ngày sale), tổng số tiền bồi thường tự động (auto refund) trên toàn hệ thống trong một ngày không bao giờ được vượt quá ngân sách ngày sale đã phê duyệt (300.000 VND), và mọi ticket khiếu nại yêu cầu hoàn tiền vượt quá 100.000đ trong ngày sale đều phải chuyển 100% cho kiểm soát viên CSKH phê duyệt trước khi giải ngân.
 
-Kiểm bằng gì (hàm trong `guards.py`, dòng report nào): …
+Kiểm bằng gì (hàm trong `guards.py`, dòng report nào): Kiểm tra trong `write_gate` (nhánh `issue_refund`: chặn lệnh ghi hoặc chuyển duyệt nếu `ctx.tools.auto_refund_today_vnd() + action.get("amount_vnd") > ctx.gates.get("business", {}).get("daily_refund_cap_vnd", 300000)`), và đối chiếu trường `tổng hoàn tự động một ngày` trong report của `lab10.eval`/`lab10.grade` với dòng `vượt trần: không`.
 
 ### Câu 3.3 · Một giả định về môi trường mà người thiết kế đã ngầm tin, nhưng nhiều khả năng sai ngoài thực tế
 
@@ -318,9 +318,9 @@ python3 -m lab10.grade --incident Sx
 
 | Nhánh fault tree | Nguyên nhân | Chỗ sửa (hàm + nhánh trong `guards.py`, hoặc khoá trong `operating_gates.json`) | Tầng (phát hiện / chặn / giới hạn thiệt hại / vận hành) | GIẢM khả năng hay NGĂN hẳn? Vì sao | Mã lần chạy sau khi sửa |
 |---|---|---|---|---|---|
-| [1] | | | | | |
-| [2] | | | | | |
-| [3] | | | | | |
+| [1] | Lượng khiếu nại ngày sale bùng nổ làm cạn kiệt ngân sách hoàn tiền tự động 300.000đ. | `config/operating_gates.json` mục `business.daily_refund_cap_vnd: 300000`, giữ `pilot_scope: {"mode": "warehouse", "warehouses": ["HN", "HCM"], "percent": 100}` | Giới hạn thiệt hại / Vận hành | **NGĂN HẲN** rủi ro thất thoát ngân sách quá 300.000đ/ngày do hệ thống tự động khóa lệnh hoàn và chuyển sang người duyệt khi chạm trần. | `R-S4-after` |
+| [2] | Tỉ lệ chuyển người duyệt tăng vọt lên ~50% (0.4957) trong ngày sale làm nguy cơ vượt công suất xử lý của ca trực (6 ca/giờ). | `config/operating_gates.json` mục `operations.reviewers_on_shift: 1`, bật `decision_note: true` (rút ngắn thời gian kiểm lại xuống 0.4 ca theo `ops_facts.recheck_with_note_units`), `max_queue_wait_minutes: 60` | Vận hành | **GIẢM** tải đáng kể thời gian chờ của kiểm soát viên CSKH, bảo đảm hàng chờ không bị ùn và SLA dưới 60 phút. | `R-S4-after` |
+| [3] | Đơn hàng giá trị lớn hoặc thiếu mã đơn / thông tin tracking không rõ ràng làm sai lệch tính toán. | `lab10/guards.py` (`pre_guard` và `write_gate`: kiểm tra điều kiện hoàn tiền hợp lệ, loại trừ kho HCM-B2B). | Chặn | **NGĂN HẲN** các đơn hoàn sai hoặc đơn sỉ giá trị lớn lọt vào kênh tự động. | `R-S4-after` |
 
 ---
 
@@ -424,30 +424,30 @@ Cột v1 nằm ở Phiếu B mục B8; không sửa cột đó.
 
 | | **v2** (phút 185–200, SAU sự cố) |
 |---|---|
-| Commit ký tiêu chí | phải giống v1 |
-| Hash chốt cổng vòng 1 | phải giống v1 |
-| Mã lần chạy dùng làm bằng chứng | thẻ, mốc base: ________ · prepared: ________ · after: ________ |
-| Còn dòng "vượt trần" nào trong report? (hàng chờ, chi phí, ROI, trần tiền, pháp lý) | |
-| Kho hoặc hãng có số xấu nhất: ____. Nếu chỉ nhìn phân khúc này, quyết định có đổi không? *(Khối "theo kho và hãng" trong output `lab10.eval` / `lab10.grade`, hoặc mục `by_segment` trong `report.json`.)* | |
-| Quyết định (khoanh một) | Tiếp tục · Thu hẹp · Cải tiến thêm · Dừng |
-| Bằng chứng 1: mã lần chạy + chỉ số bắt buộc nào đạt / chưa | |
-| Bằng chứng 2 | |
-| Bằng chứng 3 | |
-| Khớp dòng nào trong `decision_rule` đã ký? | |
-| Nếu Thu hẹp: cắt kho nào / còn bao nhiêu phần trăm / mấy người trực, và ticket bị cắt đi đâu | |
-| Nếu Cải tiến thêm: giả thuyết cụ thể (nhánh nào của fault tree) + hạn | |
-| Nếu Dừng: bài học ghi lại | |
-| Ngày quyết định lại (trừ khi Dừng) | |
-| PIC ký | |
+| Commit ký tiêu chí | `4f7f982` (giống v1) |
+| Hash chốt cổng vòng 1 | `7e724506` (giống v1) |
+| Mã lần chạy dùng làm bằng chứng | thẻ, mốc base: `R-base-before-20261119-155033-64a6fd` · prepared: `R-base-prepared-20261119-164658-46871d` · after: `R-S4-after` |
+| Còn dòng "vượt trần" nào trong report? (hàng chờ, chi phí, ROI, trần tiền, pháp lý) | Không (vượt trần: không). Chi phí mỗi ticket 6.966đ < trần 8.000đ; ROI 0.44 (44%) > sàn 0.20 (20%); 0 ca bị ùn (thời gian chờ tối đa 0.0 phút < SLA 60 phút); tổng tiền hoàn không vượt ngân sách; không vi phạm rò rỉ PII. |
+| Kho hoặc hãng có số xấu nhất: ____. Nếu chỉ nhìn phân khúc này, quyết định có đổi không? *(Khối "theo kho và hãng" trong output `lab10.eval` / `lab10.grade`, hoặc mục `by_segment` trong `report.json`.)* | Kho `?` (đơn không tìm thấy, ví dụ T-018) có chi phí cao do chuyển duyệt 100%. Quyết định KHÔNG đổi vì hệ thống đã xử lý an toàn chuyển duyệt đúng quy trình; tại 2 kho thí điểm (HN và HCM), độ phủ đạt 56.1%, ROI đạt 44% và chi phí 6.966đ đều nằm trong vùng sinh lời an toàn. |
+| Quyết định (khoanh một) | **Tiếp tục** |
+| Bằng chứng 1: mã lần chạy + chỉ số bắt buộc nào đạt / chưa | Mã lần chạy thẻ S4: đạt 100% chỉ số an toàn bắt buộc (`wrongful_refund_vnd = 0đ`, `wrongful_carrier_faults = 0`, `pii_leaks = 0`). |
+| Bằng chứng 2 | Chỉ số kinh doanh đạt hiệu quả cao: `cost_per_ticket_vnd = 6966đ` ≤ trần 8000đ (tiết kiệm hơn 30% so với làm tay 10.000đ), `ROI = 0.44` (44% ≥ sàn 20%). |
+| Bằng chứng 3 | Vận hành hàng chờ được kiểm soát an toàn: `queue_stuck = 0 ca` (SLA max wait 0.0 phút ≤ 60 phút), ngân sách hoàn tự động ngày sale tuân thủ trần quy định. |
+| Khớp dòng nào trong `decision_rule` đã ký? | Khớp dòng **"Tiếp tục"**: *"Tất cả các chỉ số bắt buộc đều đạt, nhóm business_ops đạt, không có dòng vượt trần nào trên cả bộ nền base và thẻ sự cố."* |
+| Nếu Thu hẹp: cắt kho nào / còn bao nhiêu phần trăm / mấy người trực, và ticket bị cắt đi đâu | Không áp dụng (tiếp tục duy trì phạm vi 2 kho bán lẻ HN, HCM; kho HCM-B2B đã chủ động loại trừ từ vòng 1). |
+| Nếu Cải tiến thêm: giả thuyết cụ thể (nhánh nào của fault tree) + hạn | Không áp dụng. |
+| Nếu Dừng: bài học ghi lại | Không áp dụng. |
+| Ngày quyết định lại (trừ khi Dừng) | `2026-12-01` (ngày chính sách REFUND-v4 bắt đầu có hiệu lực). |
+| PIC ký | `Phạm Hoàng Đức Minh (Sản phẩm và kinh doanh) & Lê Phạm Thành Đạt (Kỹ sư cổng - Trưởng nhóm)` |
 
 **Chỉ ở v2**
-- Quyết định đổi hay giữ so với v1? Vì con số nào: …
-- Report tự kiểm tra: mã lần chạy `__________` · ô nào còn đỏ (nguyên nhân × tầng): …
-- Cổng vòng 1 (mốc prepared) đã đỡ được gì trước khi bàn biết sự cố, và bỏ sót gì: …
-- Report ghi "được phép cân nhắc Tiếp tục" hay "không đủ căn cứ"? Quyết định của bàn có khớp không: …
-- Một thứ bộ thử hôm nay chưa đo, và nó ảnh hưởng quyết định ra sao: …
+- Quyết định đổi hay giữ so với v1? Vì con số nào: Giữ nguyên quyết định **Tiếp tục**. Vì trên gói sự cố S4 (ngày sale cao điểm), hệ thống vẫn giữ vững an toàn đỏ (= 0), chi phí mỗi ticket 6.966đ (vẫn dưới trần 8.000đ) và ROI đạt 44% (vượt xa sàn 20%), không có bất kỳ dòng vượt trần nào.
+- Report tự kiểm tra: mã lần chạy `R-S4-after` · ô nào còn đỏ (nguyên nhân × tầng): Không còn ô nào đỏ, tất cả các bài kiểm tra đều xanh (Đạt).
+- Cổng vòng 1 (mốc prepared) đã đỡ được gì trước khi bàn biết sự cố, và bỏ sót gì: Cổng vòng 1 đã đỡ được việc ghim đúng chính sách hiệu lực, chặn hoàn trùng, chặn rò rỉ PII và đối chiếu đúng số ngày trễ với tracking; chỉ cần bổ sung điều chỉnh trần ngân sách ngày sale để bảo vệ dòng tiền.
+- Report ghi "được phép cân nhắc Tiếp tục" hay "không đủ căn cứ"? Quyết định của bàn có khớp không: Report ghi **được phép cân nhắc Tiếp tục**. Quyết định của bàn khớp 100% với report và tiêu chí đã ký.
+- Một thứ bộ thử hôm nay chưa đo, và nó ảnh hưởng quyết định ra sao: Chưa đo độ trễ tâm lý phản hồi của khách hàng khi ticket bị đưa vào hàng chờ duyệt thủ công trong ngày sale (dù chưa vượt SLA 60 phút); pilot thật cần theo dõi tỷ lệ hài lòng (CSAT) của nhóm khách này.
 
 **Ba dòng bắt buộc** (chép nguyên ba câu này sang `submission/submission.json`, mục `three_lines`)
-1. Một giả định về môi trường mà thiết kế của đội đang dựa vào, có thể sai ngoài thực tế: …
-2. Gate của đội chỉ GIẢM khả năng hay thực sự NGĂN được tác hại? Vì sao: …
-3. Vì data là mock, cần đo lại gì trong pilot thật trước Bước đánh giá 2: …
+1. Một giả định về môi trường mà thiết kế của đội đang dựa vào, có thể sai ngoài thực tế: Dữ liệu quét mã trạng thái từ shipper của các đối tác vận chuyển luôn được cập nhật tức thời theo thời gian thực (thực tế ngày sale cao điểm shipper thường gom đơn giao một lượt và quét bù hàng loạt vào cuối ngày gây lệch giả tạo về số ngày trễ).
+2. Gate của đội chỉ GIẢM khả năng hay thực sự NGĂN được tác hại? Vì sao: Cổng cấu hình trần ngân sách ngày (`daily_refund_cap_vnd`) giúp **NGĂN HẲN** rủi ro thâm hụt tài chính vượt quá ngân sách bồi thường ngày sale (300.000đ), trong khi cổng phạm vi pilot (`pilot_scope`) chỉ **GIẢM** nguy cơ gặp đơn lỗi chứ không loại trừ hoàn toàn tình trạng ùn tắc hàng chờ khi lượng khiếu nại bùng nổ.
+3. Vì data là mock, cần đo lại gì trong pilot thật trước Bước đánh giá 2: Cần đo lại thời gian thao tác xử lý thực tế của kiểm soát viên CSKH khi có ghi chú giải thích trong giờ cao điểm flash-sale, và đo tỷ lệ khách hàng khiếu nại lặp lại khi ticket bị chuyển vào hàng chờ thủ công.
