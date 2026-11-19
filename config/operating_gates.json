@@ -7,18 +7,29 @@
     "roi_min": null
   },
   "operations": {
-    "pic": "",
-    "approver_id": "",
+    "pic": "NV-TUNG",
+    "approver_id": "NV-HANH",
     "reviewers_on_shift": 1,
-    "review_capacity_per_hour": null,
-    "max_queue_wait_minutes": null,
-    "stop_conditions": [],
-    "alert_channel": "",
-    "decision_note": false,
-    "review_sampling_pct": 0
+    "review_capacity_per_hour": 6,
+    "max_queue_wait_minutes": 60,
+    "stop_conditions": [
+      "Khi có 1 lỗi ghi oan cho hãng thì tắt file_carrier_fault",
+      "Khi hàng đợi vượt quá 6 ca dồn ứ (thời gian chờ > 60 phút) thì chuyển sang chế độ hỗ trợ thủ công",
+      "Khi phát hiện rò rỉ dữ liệu cá nhân PII sang bên thứ ba thì dừng trợ lý"
+    ],
+    "alert_channel": "#alerts-logix-ops",
+    "decision_note": true,
+    "review_sampling_pct": 10
   },
   "legal": {
-    "pii_fields_blocked_to_third_party": [],
-    "carrier_fault_requires_recorded_cause": false
+    "pii_fields_blocked_to_third_party": [
+      "phone",
+      "street",
+      "customer_phone",
+      "customer_address",
+      "recipient_phone",
+      "recipient_address"
+    ],
+    "carrier_fault_requires_recorded_cause": true
   }
 }

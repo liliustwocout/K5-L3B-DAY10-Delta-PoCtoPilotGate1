@@ -24,8 +24,8 @@ rồi mới chạy đánh giá. Khối 1 không sửa code.
 
 ### Câu 1.2 · Mục tiêu nhìn từ hai người
 
-- Chị Oanh, kế toán đối soát (không dùng trợ lý, nhưng phải khớp sổ với hãng và shop mỗi tuần): …
-- Chị Hạnh, trưởng ca CSKH (phải duyệt những ca trợ lý chuyển sang): …
+- Chị Oanh, kế toán đối soát (không dùng trợ lý, nhưng phải khớp sổ với hãng và shop mỗi tuần): Không có chênh lệch giữa tiền hoàn tự động trên sổ cái LogiX với số liệu đối soát của Shop/Hãng; đặc biệt số lỗi ghi phạt hãng vận chuyển (`file_carrier_fault`) phát sinh từ AI phải có căn cứ rõ ràng từ hệ thống tracking để tỷ lệ khiếu nại/phản đối từ các hãng vận chuyển bằng 0 (tránh tranh chấp và giữ vững uy tín đối tác).
+- Chị Hạnh, trưởng ca CSKH (phải duyệt những ca trợ lý chuyển sang): Số lượng ca bị chuyển sang người duyệt (escalation) không được vượt quá năng lực trực ca (tối đa 6 ca/giờ/người, thời gian chờ của khách < 60 phút theo SLA); các quyết định trợ lý chuyển sang phải có ghi chú tóm tắt lý do rõ ràng (`decision_note`), không đẩy các ca rác hoặc lỗi ngớ ngẩn làm quá tải và gây ức chế cho đội ngũ CSKH.
 
 ---
 
@@ -48,12 +48,12 @@ trợ lý có đang gây thiệt hại cho bên ngoài LogiX không; không có 
 
 | | Offline, cho MỘT bước (câu 1.3) | Telemetry production (câu 1.4) |
 |---|---|---|
-| **Bước / hành vi được đo** | | |
-| **Thước đo** (một câu, có đơn vị) | | |
-| **Dữ liệu** (lấy ở đâu, bao nhiêu, ai gán nhãn) | | |
-| **Cách tính** (công thức, mẫu số, cách xử lý ca thiếu dữ liệu) | | |
-| **Khung thời gian / ngưỡng báo động** | (không áp dụng) | |
-| **Điểm mù** (thước đo này KHÔNG thấy gì) | | |
+| **Bước / hành vi được đo** | | Hành vi ghi lỗi/phạt hãng vận chuyển (`file_carrier_fault`) hoặc hoàn tiền tự động (`issue_refund`) gây tác động đối ngoại |
+| **Thước đo** (một câu, có đơn vị) | | Tỷ lệ khiếu nại phát sinh từ đối tác/hãng vận chuyển trên tổng số ca AI ghi phạt lỗi hãng (đơn vị: %) HOẶC Số lượng yêu cầu tra soát/khiếu nại từ bên ngoài gửi về trong ngày (đơn vị: vụ/ngày) |
+| **Dữ liệu** (lấy ở đâu, bao nhiêu, ai gán nhãn) | | Hệ thống tiếp nhận khiếu nại đối soát của chị Oanh (`NV-OANH`), đối soát hóa đơn phạt tuần của hãng vận chuyển (VNX, GHTK, GHN); không cần nhãn AI mà lấy trực tiếp từ sự kiện ticket khiếu nại của đối tác |
+| **Cách tính** (công thức, mẫu số, cách xử lý ca thiếu dữ liệu) | | Tổng số vụ hãng/shop gửi văn bản khiếu nại phạt oan chia cho tổng số lệnh `file_carrier_fault` do AI tự động ghi trong kỳ đối soát. Nếu kỳ đó AI không ghi lỗi hãng nào thì mẫu số = 0, ghi nhận vi phạm = 0 |
+| **Khung thời gian / ngưỡng báo động** | (không áp dụng) | Theo dõi hàng ngày (rolling 24h) và tổng kết kỳ đối soát hàng tuần (7 ngày). Ngưỡng báo động: >= 1 vụ khiếu nại ghi phạt oan từ hãng trong tuần HOẶC tổng tiền khiếu nại lệch > 0đ |
+| **Điểm mù** (thước đo này KHÔNG thấy gì) | | Không phát hiện được trường hợp hãng vận chuyển bị phạt oan nhưng chấp nhận bỏ qua không khiếu nại vì số tiền phạt quá nhỏ, hoặc khiếu nại bị gửi trễ sau chu kỳ đối soát (sau 1-2 tuần) |
 
 **Ví dụ mẫu (bước "chọn độ trễ" của agent, đừng chép):**
 Thước đo: tỉ lệ lần chạy mà độ trễ agent dùng để tính tiền khác độ trễ theo tracking DB. Dữ liệu: sự kiện `proposal.delay_days_used`
