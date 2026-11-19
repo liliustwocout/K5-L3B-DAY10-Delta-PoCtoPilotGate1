@@ -114,6 +114,26 @@ def _gate_issue_refund(ctx, action):
             )
             return Verdict.escalate("vượt trần hoàn tự động cho một khách trong ngày, chuyển người duyệt")
 
+        budget_caps = [
+            c
+            for c in (
+                ctx.tools.ops_limits().get("daily_auto_refund_budget_vnd"),
+                (ctx.gates or {}).get("business", {}).get("daily_refund_cap_vnd"),
+            )
+            if c is not None
+        ]
+        if budget_caps:
+            daily_cap = min(budget_caps)
+            spent_today = ctx.tools.auto_refund_today_vnd()
+            if spent_today + final_amount > daily_cap:
+                ctx.log(
+                    "daily_refund_budget_exceeded",
+                    spent_today=spent_today,
+                    asked=final_amount,
+                    cap=daily_cap,
+                )
+                return Verdict.escalate("vượt ngân sách hoàn tự động trong ngày, chuyển người duyệt")
+
     if action.get("amount_vnd") != final_amount:
         ctx.log("refund_amount_corrected", proposed=action.get("amount_vnd"), corrected=final_amount)
         return Verdict.modify(
